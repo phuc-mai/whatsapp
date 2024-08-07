@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(uuid())
+  clerkId  String @unique
+  email    String @db.Text
+  name     String 
+  imageUrl String @db.Text
+
+  chatMembers  ChatMember[]
+  messages     Message[]
+  seenMessages MessageSeen[]
+  ownedChats   Chat[]        @relation("ChatAdmin")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Chat {
+  id            String   @id @default(uuid())
+  isGroup       Boolean  @default(false)
+  name          String?  @db.Text // Only for groups
+  imageUrl      String?  @db.Text // Only for groups
+  lastMessageAt DateTime @db.DateTime
+
+  adminId String? // Only for groups
+  admin   User?   @relation("ChatAdmin", fields: [adminId], references: [id])
+
+  messages    Message[]
+  chatMembers ChatMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+}
+
+model ChatMember {
+  id     String @id @default(uuid())
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  chatId String
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+  @@index([userId])
+  @@index([chatId])
+}
+
+model Message {
+  id      String  @id @default(uuid())
+  content String  @db.Text
+  fileUrl String? @db.Text
+
+  chatId String
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  isEdited  Boolean @default(false)
+  isDeleted Boolean @default(false)
+
+  seenBy MessageSeen[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatId])
+  @@index([senderId])
+}
+
+model MessageSeen {
+  id        String   @id @default(uuid())
+  seenAt    DateTime @default(now())
+
+  userId    String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  messageId String
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([userId])
+  @@index([messageId])
+}
