@@ -29,8 +29,8 @@ export default async function handler(
       return res.status(404).json({ error: "User not found" });
     }
 
-    const { content, fileUrl } = req.body;
     const { chatId } = req.query;
+    const { content, fileUrl } = req.body;
 
     if (!chatId) {
       return res.status(400).json({ error: "Chat ID missing" });
@@ -46,18 +46,6 @@ export default async function handler(
         chatMembers: {
           some: {
             userId: user?.id,
-          },
-        },
-      },
-      include: {
-        chatMembers: {
-          include: {
-            user: true,
-          },
-        },
-        messages: {
-          orderBy: {
-            createdAt: "desc",
           },
         },
       },
@@ -77,9 +65,19 @@ export default async function handler(
       },
     });
 
+    // Update the chat's lastMessageAt field
+    await db.chat.update({
+      where: {
+        id: chat.id,
+      },
+      data: {
+        lastMessageAt: new Date(),
+      },
+    });
+
     // immediately emit a socket io to all active connections
-    const chatKey = `chat:${chatId}:messages`;
-    res?.socket?.server?.io?.emit(chatKey, message);
+    const addKey = `chat:${chatId}:messages`;
+    res?.socket?.server?.io?.emit(addKey, message);
 
     return res.status(200).json(message);
   } catch (error) {

@@ -18,6 +18,9 @@ const config = {
       },
     },
     extend: {
+      maxWidth: {
+        '2/3': '66.666667%',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

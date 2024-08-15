@@ -1,15 +1,19 @@
-import CreateOrEditGroupChat from '@/components/contacts/CreateOrEditGroupChat'
-import { loggedinUser } from '@/lib/actions/loggedinUser'
-import { db } from '@/lib/db'
 import { auth } from '@clerk/nextjs/server'
 import React from 'react'
 
-const CreateGroupChatPage = async () => {
+import CreateOrEditGroupChat from '@/components/contacts/CreateOrEditGroupChat'
+import { getChatDetails } from '@/lib/actions/getChatDetails'
+import { loggedinUser } from '@/lib/actions/loggedinUser'
+import { db } from '@/lib/db'
+
+const CreateGroupChatPage = async ({ params }: { params: { chatId: string }}) => {
   const user = await loggedinUser()
 
   if (!user) {
     return auth().redirectToSignIn()
   }
+
+  const chatDetails = await getChatDetails(user.id, params.chatId)
 
   const contacts = await db.user.findMany({
     where: {
@@ -19,7 +23,7 @@ const CreateGroupChatPage = async () => {
     },
   })
 
-  return <CreateOrEditGroupChat contacts={contacts} page="create" />
+  return <CreateOrEditGroupChat contacts={contacts} page="edit" chatDetails={chatDetails} />
 }
 
 export default CreateGroupChatPage

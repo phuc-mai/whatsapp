@@ -1,18 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
-import { loggedinUser } from "./loggedinUser";
 import { db } from "@/lib/db";
 
 export const getChatDetails = async (userId: string, queryId: string) => {
-  const loggedInUser = await loggedinUser();
-
-  if (!loggedInUser) {
-    return auth().redirectToSignIn();
-  }
-
-  if (loggedInUser.id !== userId) {
-    return new Error("User is not authorized to create or get chat");
-  }
-
   let chat = await db.chat.findFirst({
     where: {
       isGroup: false,
@@ -41,7 +29,10 @@ export const getChatDetails = async (userId: string, queryId: string) => {
       },
       messages: {
         orderBy: {
-          createdAt: "desc",
+          createdAt: "asc",
+        },
+        include: {
+          sender: true,
         },
       },
     },
@@ -66,7 +57,10 @@ export const getChatDetails = async (userId: string, queryId: string) => {
         },
         messages: {
           orderBy: {
-            createdAt: "desc",
+            createdAt: "asc",
+          },
+          include: {
+            sender: true,
           },
         },
       },
@@ -92,7 +86,10 @@ export const getChatDetails = async (userId: string, queryId: string) => {
           },
           messages: {
             orderBy: {
-              createdAt: "desc",
+              createdAt: "asc",
+            },
+            include: {
+              sender: true,
             },
           },
         },

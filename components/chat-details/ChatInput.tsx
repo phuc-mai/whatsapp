@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import qs from "query-string";
 
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import EmojiPicker from "@/components/custom/EmojiPicker";
+import EmojiPicker from "@/components/chat-details/EmojiPicker";
 import AttachFile from "@/components/custom/AttachFile";
 import { Input } from "@/components/ui/input";
 

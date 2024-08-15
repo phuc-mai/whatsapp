@@ -1,29 +1,25 @@
 "use client";
 
-import { Chat, ChatMember, User } from "@prisma/client";
+import { Chat, ChatMember, Message, User } from "@prisma/client";
 import Image from "next/image";
 import { format } from "date-fns";
 import Link from "next/link";
-import { redirect, useSearchParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useSearchParams } from "next/navigation";
 
 interface ChatBoxProps {
+  user: User;
   chat: Chat & {
     chatMembers: (ChatMember & { user: User })[];
-    messages: { content: string; fileUrl: string }[];
+    messages: Message[];
   };
 }
 
-const ChatBox = ({ chat }: ChatBoxProps) => {
+const ChatBox = ({ user, chat }: ChatBoxProps) => {
   const searchParams = useSearchParams();
   const query = searchParams?.get("queryId");
 
-  const { user } = useUser();
-
-  if (!user) return redirect("/sign-in");
-
   const theOtherUser = !chat.isGroup
-    ? chat.chatMembers.find((chatMember) => chatMember.user.clerkId !== user.id)
+    ? chat.chatMembers.find((chatMember) => chatMember.user.id !== user.id)
     : undefined;
 
   const chatImageUrl = chat.isGroup
@@ -35,9 +31,7 @@ const ChatBox = ({ chat }: ChatBoxProps) => {
 
   const queryId = chat.isGroup ? chat.id : theOtherUser?.userId;
 
-  const isActive = chat.isGroup
-    ? query?.includes(chat.id)
-    : theOtherUser && query?.includes(theOtherUser.id);
+  const isActive = query === queryId;
 
   return (
     <Link
@@ -54,7 +48,7 @@ const ChatBox = ({ chat }: ChatBoxProps) => {
         className="rounded-full h-12 w-12"
       />
       <div className="flex-1 flex flex-col gap-1 overflow-hidden">
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-baseline">
           <p className="text-sm font-semibold">
             {chat.isGroup ? chat.name : theOtherUser?.user?.name}
           </p>

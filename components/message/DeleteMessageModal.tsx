@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Trash } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import qs from "query-string";
 
 import {
   AlertDialog,
@@ -16,35 +17,28 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import axios from "axios";
 
-interface DeleteProps {
-  item: string;
+interface DeleteMessageModalProps {
   chatId: string;
+  messageId: string;
 }
 
-const Delete: React.FC<DeleteProps> = ({ item, chatId }) => {
+const DeleteMessageModal = ({ chatId, messageId }: DeleteMessageModalProps) => {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const onDelete = async () => {
     try {
-      setIsDeleting(true);
-      const url = `/api/group-chat/${chatId}`;
-      const res = await fetch(url, {
-        method: "DELETE",
+      const url = qs.stringifyUrl({
+        url: `/api/socket/messages/${messageId}`,
+        query: { chatId },
       });
 
-      if (!res.ok) {
-        throw new Error(`Failed to delete ${item}`);
-      }
-
-      setIsDeleting(false);
-      router.push("/");
+      await axios.delete(url);
       router.refresh();
-      toast.success(`${item} deleted`);
     } catch (error) {
-      console.log(`Failed to delete ${item}`, error);
-      toast.error("Something went wrong!");
+      console.error("Failed to send message", error);
     }
   };
 
@@ -52,20 +46,20 @@ const Delete: React.FC<DeleteProps> = ({ item, chatId }) => {
     <AlertDialog>
       <AlertDialogTrigger>
         {isDeleting ? (
-          <Loader2 size={18} className="animate-spin" />
+          <Loader2 size={10} className="animate-spin" />
         ) : (
-          <Trash size={18} className="hover:text-red-500" />
+          <Trash size={10} className="hover:text-red-500" />
         )}
       </AlertDialogTrigger>
 
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-red-1">
+          <AlertDialogTitle className="text-red-500">
             Are you absolutely sure?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete your{" "}
-            {item}.
+            This action cannot be undone. This will permanently delete your
+            message.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -77,4 +71,4 @@ const Delete: React.FC<DeleteProps> = ({ item, chatId }) => {
   );
 };
 
-export default Delete;
+export default DeleteMessageModal;

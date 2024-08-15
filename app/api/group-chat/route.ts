@@ -18,7 +18,10 @@ export const POST = async (req: NextRequest) => {
       });
     }
 
-    const groupChat = await db.chat.create({
+    // Ensure the user is included in the members list
+    const allMembers = new Set([user.id, ...members]);
+
+    const newGroupChat = await db.chat.create({
       data: {
         isGroup: true,
         name,
@@ -26,14 +29,9 @@ export const POST = async (req: NextRequest) => {
         lastMessageAt: new Date(),
         adminId: user.id,
         chatMembers: {
-          create: [
-            ...members.map((memberId: string) => ({
-              userId: memberId,
-            })),
-            {
-              userId: user.id,
-            },
-          ],
+          create: Array.from(allMembers).map((memberId: string) => ({
+            userId: memberId,
+          })),
         },
       },
       include: {
@@ -45,7 +43,7 @@ export const POST = async (req: NextRequest) => {
       },
     });
 
-    return NextResponse.json(groupChat, { status: 200 });
+    return NextResponse.json(newGroupChat, { status: 200 });
   } catch (err) {
     console.log("[group-chat_POST]", err);
     return new NextResponse("Internal Server Error", { status: 500 });

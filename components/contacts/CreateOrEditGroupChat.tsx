@@ -1,6 +1,6 @@
 "use client";
 
-import { User } from "@prisma/client";
+import { Chat, ChatMember, User } from "@prisma/client";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -24,25 +24,35 @@ import FileUpload from "@/components/custom/FileUpload";
 import SelectContacts from "./SelectContacts";
 import { Loader2 } from "lucide-react";
 
-interface CreateGroupChatProps {
+interface CreateOrEditGroupChatProps {
   contacts: User[];
+  page: "create" | "edit";
+  chatDetails?: Chat & {
+    chatMembers: (ChatMember & { user: User })[];
+  };
 }
 
 const formSchema = z.object({
   name: z.string().min(2).max(20),
   imageUrl: z.string().optional(),
-  members: z.array(z.string().min(1)).nonempty().min(2), // contains at least 2 member
+  members: z.array(z.string()).min(2, "At least 2 members required"),
+
 });
 
-const CreateGroupChat = ({contacts }: CreateGroupChatProps) => {
+const CreateOrEditGroupChat = ({
+  contacts,
+  page,
+  chatDetails,
+}: CreateOrEditGroupChatProps) => {
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      imageUrl: "",
-      members: [],
+      name: chatDetails?.name ?? "",
+      imageUrl: chatDetails?.imageUrl ?? "",
+      members:
+        chatDetails?.chatMembers?.map((chatMember) => chatMember.user.id) ?? [],
     },
   });
 
@@ -63,16 +73,33 @@ const CreateGroupChat = ({contacts }: CreateGroupChatProps) => {
     ] as [string, ...string[]]);
   }, [selectedContacts, form]);
 
+  useEffect(() => {
+    if (page === "edit" && chatDetails?.chatMembers) {
+      setSelectedContacts(chatDetails.chatMembers.map((cm) => cm.user));
+    }
+  }, [page, chatDetails]);
+
   const { isSubmitting, isValid } = form.formState;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const response = await axios.post("/api/group-chat", values);
-      toast.success("New group chat created");
-      router.push(`/?chatId=${response.data.id}`);
+      let response;
+
+      if (page === "create") {
+        response = await axios.post("/api/group-chat", values);
+        toast.success("New group chat created");
+      } else if (page === "edit" && chatDetails?.id) {
+        response = await axios.patch(
+          `/api/group-chat/${chatDetails.id}`,
+          values
+        );
+        toast.success("Group chat updated");
+      }
+
+      router.push(`/?queryId=${response?.data.id}`);
     } catch (error) {
       toast.error("Something went wrong!");
-      console.error("Failed to create group chat", error);
+      console.error("Failed to create or edit group chat", error);
     }
   };
 
@@ -80,7 +107,7 @@ const CreateGroupChat = ({contacts }: CreateGroupChatProps) => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-1 md:gap-10 lg:gap-40 p-10"
+        className="flex flex-1 max-md:flex-col max-md:gap-5 md:gap-10 lg:gap-40 p-10"
       >
         <div className="flex flex-col space-y-8">
           <FormField
@@ -115,13 +142,32 @@ const CreateGroupChat = ({contacts }: CreateGroupChatProps) => {
               </FormItem>
             )}
           />
-          <Button type="submit" disabled={!isValid || isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              "Create Group Chat"
-            )}
-          </Button>
+          <div className="flex gap-3">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : page === "create" ? (
+                "Create Group Chat"
+              ) : (
+                "Update Group Chat"
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `${
+                    page === "create"
+                      ? "/contacts"
+                      : `/?queryId=${chatDetails?.id}`
+                  }`
+                )
+              }
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
         <div className="flex-1 max-w-96">
           <FormField
@@ -166,4 +212,4 @@ const CreateGroupChat = ({contacts }: CreateGroupChatProps) => {
   );
 };
 
-export default CreateGroupChat;
+export default CreateOrEditGroupChat;
